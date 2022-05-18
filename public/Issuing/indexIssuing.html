@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+    <title>Reality Whises</title>
+
+    <!-- Required Stylesheets -->
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css" />
+
+    <!-- Required scripts -->
+    <script src="//cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+    <script src="//unpkg.com/babel-polyfill@latest/dist/polyfill.min.js"></script>
+    <script src="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+</head>
+
+<body>
+<!-- Our application root element -->
+<div id="vue-template">
+    <b-form-group v-if="!isVisible">
+        <h3>Inicio de sesión</h3>
+        <b-form-group horizontal :label-cols="4" label="Email:">
+            <b-form-input v-model.trim="email"></b-form-input>
+        </b-form-group>
+
+        <b-form-group horizontal :label-cols="4" label="Contraseña:">
+            <b-form-input type="passwd" v-model.trim="passwd"></b-form-input>
+        </b-form-group>
+        <hr>
+        <b-button class="btn btn-dark btn-lg btn-block" @click="sesion">Acceder</b-button>
+        <b-button class="btn btn-dark btn-lg btn-block" href="../index.html">Inicio</b-button>
+        <div v-if="!sesionOk">
+            <b-card>
+                <p>Ha ocurrido un error en el inicio de seión, asegurese de que los datos introducidos son correctos</p>
+            </b-card>
+        </div>
+    </b-form-group>
+
+
+
+    <b-form-group v-if="isVisible">
+        <h3>Bienvenido </h3>
+        <hr>
+        <h3>Mis deseos</h3>
+        <b-button @click="getWishes(issuingId)" class="btn btn-dark btn-lg btn-block">Ver mis deseos</b-button>
+        <b-table responsive :items="wishes">
+            <p v-for="wish in wishes">
+                {{wish.name}} with description: {{wish.description}} with price: {{wish.price}}
+            </p>
+        </b-table>
+        <hr>
+        <h3>Transacciones recibidas</h3>
+        <b-button @click="getTransactions(issuingId)" class="btn btn-dark btn-lg btn-block">Ver las transacciones recibidas</b-button>
+        <div v-if="transactions.length>0">
+            <b-card>
+                <ul>
+                    <p v-for="transaction in transactions">
+                        Transacción de {{transaction.cant}}€ para el deseo {{transaction.wish.name}} efectuado por {{transaction.donor.name}}
+                    </p>
+                </ul>
+            </b-card>
+        </div>
+        <hr>
+        <h3>Pedir deseo</h3>
+
+        <b-form-group horizontal :label-cols="4" label="Nombre del deseo:">
+            <b-form-input v-model.trim="name"></b-form-input>
+        </b-form-group>
+
+        <b-form-group horizontal :label-cols="4" label="Breve descripción:">
+            <b-form-input v-model.trim="description"></b-form-input>
+        </b-form-group>
+
+        <b-form-group horizontal :label-cols="4" label="Precio:">
+            <b-form-input v-model.trim="price"></b-form-input>
+        </b-form-group>
+        <hr>
+
+        <b-card responsive :items="transactionsNew">
+            <h3>Nuevas transacciones recibidas</h3>
+            <b-div v-if="transactionsNew.length===0">
+                <p>No tienes transacciones nuevas</p>
+            </b-div>
+            <ul>
+                <p v-for="transactionNew in transactionsNew" v-if="(transactionNew.issuing === issuingId)">
+                    Nueva transacción de {{transactionNew.cant}}€ para el deseo {{transactionNew.wish}} efectuado por {{transactionNew.donor}}
+                </p>
+            </ul>
+        </b-card>
+        <hr>
+        <b-button @click="addWish" class="btn btn-dark btn-lg btn-block">Publicar deseo</b-button>
+        <b-button class="btn btn-dark btn-lg btn-block" href="../index.html">Atrás</b-button>
+    </b-form-group>
+
+
+</div>
+
+
+
+<!-- Start running your app -->
+<script>
+    var app2 = new Vue({
+        el: '#vue-template',
+        data: {
+            email: '',
+            passwd: '',
+            sesionOk: true,
+            name: '',
+            description: '',
+            price: '',
+            issuingId: '',
+            wishes: [],
+            isVisible: false,
+            transactions: [],
+            transactionsNew: [],
+        },
+        computed: {
+            showAlert() {
+                return this.isVisible
+            }
+        },
+        methods: {
+            sesion() {
+                var self = this
+                var gql = `query{searchIssuing(email: "${this.email}", passwd: "${this.passwd}"){name _id}}`
+                fetch('/graphql?query=' + encodeURIComponent(gql))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        if (json.data != null) {
+                            self.issuingId = json.data.searchIssuing._id
+                            self.isVisible = true
+                            console.log(self.issuingId)
+                        }else{
+                            self.sesionOk = false
+                        }
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            addWish() {
+                var self = this
+                var gql = `mutation{addWish(name: "${this.name}", description: "${this.description}", price: ${this.price}, issuingId: ${this.issuingId}){name price}}`
+                fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: gql
+                    })
+                })
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json)
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            getWishes(issuingId) {
+                var self = this
+                var gQL = `query{wishesIssuing(issuingId: ${issuingId}){name description price}}`
+                fetch('/graphql?query=' + encodeURIComponent(gQL))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json)
+                        self.wishes = json.data.wishesIssuing
+                        //console.log(self.wishes)
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            getTransactions(issuingId) {
+                var self = this
+                var gQL = `query{transactionsIssuing(issuingId: ${issuingId}){wish{name} donor{name} cant}}`
+                fetch('/graphql?query=' + encodeURIComponent(gQL))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json)
+                        self.transactions = json.data.transactionsIssuing
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+        },
+        mounted() {
+            var self = this
+            var ES = new EventSource('/news') //ruta API con notificaciones
+
+            console.log('Creando listener de eventos de servidor...')
+
+            ES.addEventListener('new-transaction', function(event) {
+                var data = JSON.parse(JSON.parse(event.data))
+                //bytes to string -> string to json
+                self.transactionsNew.push(data)
+            }, false)
+        }
+    })
+</script>
+</body>
+
+</html>

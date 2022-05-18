@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+    <title>Reality Whises</title>
+
+    <!-- Required Stylesheets -->
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css" />
+
+    <!-- Required scripts -->
+    <script src="//cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+    <script src="//unpkg.com/babel-polyfill@latest/dist/polyfill.min.js"></script>
+    <script src="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+</head>
+
+<body>
+    <!-- Our application root element -->
+    <div id="app">
+        <b-container>
+            <b-jumbotron header="Reality Wishes" lead="Make your wishes come true">
+                <p>Para publicar un deseo:</p>
+                <b-btn variant="danger" href="./Issuing/indexIssuing.html">¡ Pedir deseos !</b-btn>
+                <p></p>
+                <p>Para contribuir a un deseo:</p>
+                <b-btn variant="danger" href="./Donor/indexDonor.html">¡ Subvencionar deseos !</b-btn>
+            </b-jumbotron>
+            <hr>
+            <b-btn variant="danger" href="./Issuing/createIssuing.html">Registrarse para pedir deseos</b-btn>
+            <b-btn variant="danger" href="./Donor/createDonor.html">Registrarse para subvencionar deseos</b-btn>
+        </b-container>
+
+    </div>
+
+    <!-- Start running your app -->
+    <script>
+        window.app = new Vue({
+            el: '#app',
+            data: {
+                name: '', //nombre de usuario (no se usa)
+                query: '', //búsqueda
+                blogId: '', //blog activado
+                issuings: [],
+                donors: [],
+                wishes: [],
+                transactions: [],
+                post: '', //nuevo post
+            },
+            computed: {
+
+            },
+            methods: {
+
+            },
+            mounted() {
+                var self = this
+                var ES = new EventSource('/news') //ruta API con notificaciones
+
+                console.log('Creando listener de eventos de servidor...')
+
+                ES.addEventListener('new-user', function(event) {
+                    var data = JSON.parse(JSON.parse(event.data))
+                    self.users.push(data)
+                }, false)
+            }
+        })
+    </script>
+</body>
+
+</html>

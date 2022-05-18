@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+    <title>Reality Whises</title>
+
+    <!-- Required Stylesheets -->
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css" />
+
+    <!-- Required scripts -->
+    <script src="//cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+    <script src="//unpkg.com/babel-polyfill@latest/dist/polyfill.min.js"></script>
+    <script src="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+</head>
+
+<body>
+<!-- Our application root element -->
+<div id="vue-template">
+    <b-form-group v-if="!isVisible">
+        <h3>Inicio de sesión</h3>
+        <b-form-group horizontal :label-cols="4" label="Email:">
+            <b-form-input v-model.trim="email"></b-form-input>
+        </b-form-group>
+
+        <b-form-group horizontal :label-cols="4" label="Contraseña:">
+            <b-form-input type="passwd" v-model.trim="passwd"></b-form-input>
+        </b-form-group>
+        <hr>
+        <b-button class="btn btn-dark btn-lg btn-block" @click="sesion">Acceder</b-button>
+        <b-button class="btn btn-dark btn-lg btn-block" href="../index.html">Inicio</b-button>
+        <div v-if="!sesionOk">
+            <b-card>
+                <p>Ha ocurrido un error en el inicio de seión, asegurese de que los datos introducidos son correctos</p>
+            </b-card>
+        </div>
+
+    </b-form-group>
+
+
+    <b-form-group v-if="isVisible">
+        <h3>Bienvenido </h3>
+        <hr>
+        <h3>Generar transacciones</h3>
+        <b-form-group horizontal :label-cols="4" label="Buscador de deseos">
+            <b-form-input v-model.trim="query" placeholder="... por ejemplo pizza" @keyup.enter="searchWish">
+            </b-form-input>
+        </b-form-group>
+        <div v-if="wishes.length>0">
+            <b-card>
+                <ul>
+                    <p v-for="wish in wishes">
+                        <b-button @click="transaction(wish._id, wish.issuing._id)">{{wish.name}}</b-button> de {{wish.issuing.name}} por un total de {{wish.price}}€
+                    </p>
+                </ul>
+            </b-card>
+        </div>
+
+        <b-form-group v-if="isTransaction">
+            <b-form-group horizontal :label-cols="4" label="Subencionar deseo:">
+                <b-form-input v-model.trim="cant" placeholder="... por ejemplo 15"></b-form-input>
+            </b-form-group>
+            <b-button class="btn btn-dark btn-lg btn-block" @click="addTransaction">Añadir transacción</b-button>
+        </b-form-group>
+        <div v-if="!transactionOk">
+            <b-card>
+                <p>Ha ocurrido un error en la transacción, revise que la cantidad a transferir es igual o menor que el total del deseo</p>
+            </b-card>
+        </div>
+        <hr>
+        <h3>Transacciones efectuadas</h3>
+        <b-button @click="getTransactions(donorId)" class="btn btn-dark btn-lg btn-block">Ver las transacciones efectuadas</b-button>
+        <div v-if="transactions.length>0 && transactionOk">
+            <b-card>
+                <ul>
+                    <p v-for="transaction in transactions">
+                        Transacción de {{transaction.cant}}€ para el deseo {{transaction.wish.name}} del usuario {{transaction.issuing.name}}
+                    </p>
+                </ul>
+            </b-card>
+        </div>
+
+        <hr>
+        <b-card responsive :items="wishesNew">
+            <h3>Nuevos deseos</h3>
+            <b-div v-if="wishesNew.length===0">
+                <p>No hay deseos nuevos</p>
+            </b-div>
+            <ul>
+                <p v-for="wish in wishesNew">
+                    Nuevo deseo: {{wish.name}} con descripción {{wish.description}} por un total de {{wish.price}}€ del usuario {{wish.issuing}}
+                </p>
+            </ul>
+        </b-card>
+        <hr>
+        <b-button class="btn btn-dark btn-lg btn-block" href="../index.html">Inicio</b-button>
+    </b-form-group>
+
+</div>
+
+
+
+<!-- Start running your app -->
+<script>
+    var app2 = new Vue({
+        el: '#vue-template',
+        data: {
+            email: '',
+            passwd: '',
+            sesionOk: true,
+            query: '',
+            name: '',
+            cant: '',
+            donorId: '',
+            wishId: '',
+            issuingId: '',
+            wishes: [],
+            wishesNew: [],
+            transactions: [],
+            isVisible: false,
+            isTransaction: false,
+            transactionOk: true,
+        },
+        computed: {
+            showAlert() {
+                return this.isVisible
+            }
+        },
+        methods: {
+            sesion() {
+                var self = this
+                var gql = `query{searchDonor(email: "${this.email}", passwd: "${this.passwd}"){name _id}}`
+                fetch('/graphql?query=' + encodeURIComponent(gql))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        if (json.data != null) {
+                            self.donorId = json.data.searchDonor._id
+                            self.isVisible = true
+                            console.log(self.donorId)
+                        }else{
+                            self.sesionOk = false
+                        }
+
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            searchWish() {
+                var self = this
+                var gql = `query{searchWish(name: "${this.query}"){name _id description price issuing{_id name}}}`
+                fetch('/graphql?query=' + encodeURIComponent(gql))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json)
+                        self.wishes = json.data.searchWish
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            transaction(wishId, issuingId) {
+                this.isTransaction = true
+                this.wishId = wishId
+                this.issuingId = issuingId
+            },
+            addTransaction() {
+                var self = this
+                var gql = `mutation{addTransaction(wishId: ${this.wishId}, issuingId: ${this.issuingId}, donorId: ${this.donorId}, cant: ${this.cant}){wish{name} issuing{name} cant}}`
+                fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: gql
+                    })
+                })
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        if (json.data != null) {
+                            console.log(json)
+                            self.transactionOk = true
+                        }else{
+                            self.transactionOk = false
+                        }
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+
+            },
+            getTransactions(donorId) {
+                var self = this
+                var gQL = `query{transactionsDonor(donorId: ${donorId}){wish{name} issuing{name} cant}}`
+                fetch('/graphql?query=' + encodeURIComponent(gQL))
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json)
+                        self.transactions = json.data.transactionsDonor
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            },
+            editWish(wishId, cant) {
+                var self = this
+                var gql = `mutation{editWish(wishId: ${wishId}, cant: ${cant}){name price}}`
+                fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: gql
+                    })
+                })
+                    .then(function(r) {
+                        return r.json()
+                    })
+                    .then(function(json) {
+                        console.log(json.data.editWish.price)
+                        console.log(json)
+                    })
+                    .catch(function(error) {
+                        console.log(error)
+                    })
+            }
+
+        },
+        mounted() {
+            var self = this
+            var ES = new EventSource('/news') //ruta API con notificaciones
+
+            console.log('Creando listener de eventos de servidor...')
+
+            ES.addEventListener('new-wish', function(event) {
+                var data = JSON.parse(JSON.parse(event.data))
+                //bytes to string -> string to json
+                self.wishesNew.push(data)
+            }, false)
+
+        }
+    })
+</script>
+</body>
+
+</html>
